@@ -48,29 +48,37 @@ def remote() -> Response:
 
 
 def loadRemoteImage(url: str) -> list[Image.Image]:
-    images: list[Image.Image] = []
     fileNameFromURIPattern: str = "/^.*\/(.*)\.(.*)\?.*$/"
     foundFile = re.search(fileNameFromURIPattern, url)
     file_name = foundFile.group()
     if file_name is None:
         raise Exception("Filename missing in URL")
+    
     #download the remote file
     res = requests.get(url, stream = True)
+    
     #checking the responce for the requested remote file 
-    # and save to local disk
+    #and save to local disk
     realtiv_path = "images/" + file_name
     imagePath = os.path.join(os.getcwd(), realtiv_path)
+    try: 
+        images: list[Image.Image] = []
+        if res.status_code == 200:
+            with open(imagePath,'wb') as f:
+                shutil.copyfileobj(res.raw, f)
+            print('Image sucessfully Downloaded: ',imagePath)
+        else:
+            raise Exception('Image Couldn\'t be retrieved')
+        
+        images.append(imagePath)
+        #check for empty list
+        if not images:
+            raise Exception("can not load image")
+        
+        return images
+    except OSError:
+        raise Exception("Image Not Found")
     
-    if res.status_code == 200:
-        with open(imagePath,'wb') as f:
-            shutil.copyfileobj(res.raw, f)
-        print('Image sucessfully Downloaded: ',imagePath)
-    else:
-        raise Exception('Image Couldn\'t be retrieved')
-    
-    images.append(imagePath)
-     
-    return images
 
 def loadLocalImage(image_path: str) -> list[Image.Image]:
     images: list[Image.Image] = []
