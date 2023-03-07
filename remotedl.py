@@ -9,22 +9,22 @@ app = Flask(__name__)
 def remote_dl():
     url = request.args.get('url')
     if url is None:
-        return "missing URL Parameter"
+        raise Exception(missing URL Parameter")
     
     fileNameFromURIPattern: str = "/^.*\/(.*)\.(.*)\?.*$/"
     foundFile = re.search(fileNameFromURIPattern, url)
     file_name = foundFile.group()
     if file_name is None:
-        return "Filename missing in URL"
+        raise Exception("Filename missing in URL")
     
     res = requests.get(url, stream = True)
 
     if res.status_code == 200:
         with open(file_name,'wb') as f:
             shutil.copyfileobj(res.raw, f)
-        print('Image sucessfully Downloaded: ',file_name)
+        raise Exception('Image sucessfully Downloaded: ',file_name)
     else:
-        print('Image Couldn\'t be retrieved')
+        raise Exception('Image Couldn\'t be retrieved')
     
 
 if __name__ == '__main__':
