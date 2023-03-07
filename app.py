@@ -19,7 +19,14 @@ def local() -> Response:
         if data is None:
             return jsonify("Please input a valid string: /local?data=test.png")
         print("data ---- > ", data)
-        results = predict_step(data)
+        realtiv_path = "images/" + data
+        imagePath = os.path.join(os.getcwd(), realtiv_path)
+
+        images: list[Image.Image] = loadLocalImage(imagePath)
+        if not images:
+            raise Exception("wrong Image get loaded: " + imagePath)
+        
+        results = predict_step(images)
         return jsonify(results)
     return jsonify("Not a proper request method or data")
 
@@ -30,10 +37,13 @@ def remote() -> Response:
     url = request.args.get('url')
     if url is None:
         jsonify("Please input a valid string: /remote?url=https%3A%2F%2Fwww.test.de%2Fimage.png")
-    print("data ---- > ", url)
+    print("URL ---- > ", url)
     
-    data: list[Image.Image] = loadRemoteImage(url)   
-    results = predict_step(data)
+    images: list[Image.Image] = loadRemoteImage(url)
+    if not images:
+        raise Exception("wrong Image get loaded: " + url)
+    
+    results = predict_step(images)
     return jsonify(results)
 
 
@@ -54,7 +64,7 @@ def loadRemoteImage(url: str) -> list[Image.Image]:
     if res.status_code == 200:
         with open(imagePath,'wb') as f:
             shutil.copyfileobj(res.raw, f)
-        raise Exception('Image sucessfully Downloaded: ',imagePath)
+        print('Image sucessfully Downloaded: ',imagePath)
     else:
         raise Exception('Image Couldn\'t be retrieved')
     
@@ -67,8 +77,10 @@ def loadLocalImage(image_path: str) -> list[Image.Image]:
     try:        
         loadedImage = Image.open(open(image_path, 'rb'))
         if loadedImage.mode != "RGB":
-            loadedImage = loadedImage.convert(mode="RGB")
+            loadedImage = loadedImage.convert(mode="RGB")            
         images.append(loadedImage)
+        
+        #check for empty list
         if not images:
             raise Exception("can not load image")
         
@@ -81,17 +93,9 @@ def loadLocalImage(image_path: str) -> list[Image.Image]:
 max_length = 16
 num_beams = 4
 gen_kwargs = {"max_length": max_length, "num_beams": num_beams}
-def predict_step(image_path: str) -> list:
-    realtiv_path = "images/" + image_path
-    imagePath = os.path.join(os.getcwd(), realtiv_path)
-
-    images = loadLocalImage(imagePath)
-    if not images:
-        raise Exception("wrong Image get loaded: " + imagePath)
-    
-
-    # build the token out of the image array
-    pixel_values = feature_extractor(images=images, return_tensors="pt").pixel_values
+def predict_step(image_list: list[Image.Image]) -> list[str]:
+    #build the token out of the image list
+    pixel_values = feature_extractor(images=image_list, return_tensors="pt").pixel_values
     pixel_values = pixel_values.to(device)
 
     output_ids = model.generate(pixel_values, **gen_kwargs)
