@@ -26,10 +26,12 @@ def local() -> Response:
 # Example:
 # http://127.0.0.1:5000/remote?url=https%3A%2F%2Fwww.test.de%2Fimage.png
 @app.route('/remote', methods=['GET'])
-def remote_dl() -> Response:
+def remote() -> Response:
     url = request.args.get('url')
     if url is None:
         jsonify("Please input a valid string: /remote?url=https%3A%2F%2Fwww.test.de%2Fimage.png")
+    print("data ---- > ", url)
+    
     data: list[Image.Image] = loadRemoteImage(url)   
     results = predict_step(data)
     return jsonify(results)
@@ -42,17 +44,21 @@ def loadRemoteImage(url: str) -> list[Image.Image]:
     file_name = foundFile.group()
     if file_name is None:
         raise Exception("Filename missing in URL")
-    
+    #download the remote file
     res = requests.get(url, stream = True)
-
+    #checking the responce for the requested remote file 
+    # and save to local disk
+    realtiv_path = "images/" + file_name
+    imagePath = os.path.join(os.getcwd(), realtiv_path)
+    
     if res.status_code == 200:
-        with open(file_name,'wb') as f:
+        with open(imagePath,'wb') as f:
             shutil.copyfileobj(res.raw, f)
-        raise Exception('Image sucessfully Downloaded: ',file_name)
+        raise Exception('Image sucessfully Downloaded: ',imagePath)
     else:
         raise Exception('Image Couldn\'t be retrieved')
     
-    images.append(file_name)
+    images.append(imagePath)
      
     return images
 
@@ -101,14 +107,13 @@ if __name__ == '__main__':
     model = VisionEncoderDecoderModel.from_pretrained(model_path, local_files_only=True)
     feature_extractor = ViTImageProcessor.from_pretrained(model_path, local_files_only=True)
 
-    print("----------- transformer model loaded ------------")
+    print("transformer model loaded")
     tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
-    print("----------- transformer tokenizer loaded ------------")
+    print("transformer tokenizer loaded")
 
     #device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     device = torch.device("cpu")
     model.to(device)
-
-    print("----------- model loaded ------------")
+    print("model loaded")
 
     app.run(debug=True, host='0.0.0.0')
