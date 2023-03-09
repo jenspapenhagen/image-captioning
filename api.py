@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, Response, abort
+from flask import Flask, request, jsonify, Response, abort, logging
 from flask_cors import CORS, cross_origin
 from prometheus_flask_exporter import PrometheusMetrics
 from transformers import VisionEncoderDecoderModel, ViTImageProcessor, AutoTokenizer
@@ -8,9 +8,9 @@ from PIL import Image
 import os
 import datetime
 
-
+logging.basicConfig(level=logging.INFO)
 app = Flask(__name__)
-cors = CORS(app, resources={r"/lable/": {"origins": "*"}})
+cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 app.config['CORS_HEADERS'] = 'Content-Type'
 app.permanent_session_lifetime = datetime.timedelta(days=365)
@@ -35,8 +35,8 @@ remote_counter = metrics.counter(
 )
 
 # Example:
-# http://127.0.0.1:5000/local?data=test.png
-@app.route('/local', methods=['GET'])
+# http://127.0.0.1:5000/api/local?data=test.png
+@app.route('/api/local', methods=['GET'])
 @common_counter
 @cross_origin(origin='localhost', headers=['Content-Type', 'Authorization'])
 def local() -> Response:    
@@ -59,8 +59,8 @@ def local() -> Response:
 
 
 # Example:
-# http://127.0.0.1:5000/remote?url=https%3A%2F%2Fwww.test.de%2Fimage.png
-@app.route('/remote', methods=['GET'])
+# http://127.0.0.1:5000/api/remote?url=https%3A%2F%2Fwww.test.de%2Fimage.png
+@app.route('/api/remote', methods=['GET'])
 @remote_counter
 @cross_origin(origin='localhost', headers=['Content-Type', 'Authorization'])
 def remote() -> Response:
@@ -85,6 +85,11 @@ metrics.register_default(
         labels={'path': lambda: request.path}
     )
 )
+
+@app.errorhandler(500)
+def server_error(e):
+    logging.exception('An error occurred during a request. %s', e)
+    return "An internal error occurred", 500
 
 def _load_remote_image(url: str) -> list[Image.Image]:
     try:
