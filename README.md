@@ -1,7 +1,9 @@
 # image-captioning
-playing around with image-captioning modle 
-and try to make it prod ready.
+playing around with image-captioning model and try to make it prod ready.
 
+first idea: as an python flask http endpoint
+sec. : move this endpoint into a docker image and mount the model and images from the host
+3. :  try to make falsk prod save.
 
 
 the model is:
