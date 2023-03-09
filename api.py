@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify, Response
+from flask_cors import CORS, cross_origin
 from transformers import VisionEncoderDecoderModel, ViTImageProcessor, AutoTokenizer
 import torch
 from urllib.request import urlopen
@@ -6,6 +7,10 @@ from PIL import Image
 import os
 
 app = Flask(__name__)
+cors = CORS(app, resources={r"/lable/": {"origins": "*"}})
+
+app.config['CORS_HEADERS'] = 'Content-Type'
+app.permanent_session_lifetime = datetime.timedelta(days=365)
 
 
 # Example:
