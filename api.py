@@ -124,17 +124,19 @@ def _predict_step(image_list: list[Image.Image]) -> list[str]:
 
 
 if __name__ == '__main__':
+    print("laod the local model")
     model_path: str = './models/transformers/'
+
     model = VisionEncoderDecoderModel.from_pretrained(model_path, local_files_only=True)
     feature_extractor = ViTImageProcessor.from_pretrained(model_path, local_files_only=True)
-
     print("transformer model loaded")
+
     tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
     print("transformer tokenizer loaded")
 
     # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     device = torch.device("cpu")
     model.to(device)
-    print("model loaded")
+    print("model competed loaded")
 
     app.run(debug=False, host='0.0.0.0', threaded=True)
