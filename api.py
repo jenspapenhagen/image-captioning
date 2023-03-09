@@ -1,21 +1,38 @@
 from flask import Flask, request, jsonify, Response
 from flask_cors import CORS, cross_origin
+from prometheus_flask_exporter import PrometheusMetrics
 from transformers import VisionEncoderDecoderModel, ViTImageProcessor, AutoTokenizer
 import torch
 from urllib.request import urlopen
 from PIL import Image
 import os
+import datetime
+
 
 app = Flask(__name__)
 cors = CORS(app, resources={r"/lable/": {"origins": "*"}})
 
 app.config['CORS_HEADERS'] = 'Content-Type'
 app.permanent_session_lifetime = datetime.timedelta(days=365)
+metrics = PrometheusMetrics(app, group_by='endpoint')
 
+
+# HOWTO: https://blog.miguelgrinberg.com/post/designing-a-restful-api-with-python-and-flask
+# Prometheus
+# https://blog.viktoradam.net/2020/05/11/prometheus-flask-exporter/
+# request duration metrics and request counters exposed on the /metrics endpoint of the Flask application
+
+# custom metric to be applied to multiple endpoints
+common_counter = metrics.counter(
+    'by_endpoint_counter', 'Request count by endpoints',
+    labels={'endpoint': lambda: request.endpoint}
+)
 
 # Example:
 # http://127.0.0.1:5000/local?data=test.png
 @app.route('/local', methods=['GET'])
+@common_counter
+@cross_origin(origin='localhost', headers=['Content-Type', 'Authorization'])
 def local() -> Response:    
     data: str = request.args.get('data')
     if data is None:
@@ -24,11 +41,11 @@ def local() -> Response:
 
     realtiv_path = "images/" + data
     image_path = os.path.join(os.getcwd(), realtiv_path)
-    images: list[Image.Image] = load_local_image(image_path)
+    images: list[Image.Image] = _load_local_image(image_path)
 
     if not images:
         raise Exception("wrong Image get loaded: " + image_path)
-    results = predict_step(images)
+    results = _predict_step(images)
 
     return jsonify(results)   
 
@@ -42,15 +59,22 @@ def remote() -> Response:
         jsonify("Please input a valid string: /remote?url=https%3A%2F%2Fwww.test.de%2Fimage.png")
     print("URL ---- > ", url_parameter)
 
-    images: list[Image.Image] = load_remote_image(url_parameter)
+    images: list[Image.Image] = _load_remote_image(url_parameter)
     if not images:
         raise Exception("wrong Image get loaded: " + url_parameter)
 
-    results = predict_step(images)
+    results = _predict_step(images)
     return jsonify(results)
 
+# register additional default metrics
+metrics.register_default(
+    metrics.counter(
+        'by_path_counter', 'Request count by request paths',
+        labels={'path': lambda: request.path}
+    )
+)
 
-def load_remote_image(url: str) -> list[Image.Image]:
+def _load_remote_image(url: str) -> list[Image.Image]:
     try:
         images: list[Image.Image] = []
         img = Image.open(urlopen(url))
@@ -65,7 +89,7 @@ def load_remote_image(url: str) -> list[Image.Image]:
         raise Exception("Image Not Found")
 
 
-def load_local_image(image_path: str) -> list[Image.Image]:
+def _load_local_image(image_path: str) -> list[Image.Image]:
     try:
         images: list[Image.Image] = []
         loaded_image = Image.open(open(image_path, 'rb'))
@@ -87,7 +111,7 @@ max_length = 16
 num_beams = 4
 gen_kwargs = {"max_length": max_length, "num_beams": num_beams}
 
-def predict_step(image_list: list[Image.Image]) -> list[str]:
+def _predict_step(image_list: list[Image.Image]) -> list[str]:
     # build the token out of the image list
     pixel_values = feature_extractor(images=image_list, return_tensors="pt").pixel_values
     pixel_values = pixel_values.to(device)
