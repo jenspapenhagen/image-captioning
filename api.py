@@ -21,6 +21,8 @@ metrics = PrometheusMetrics(app, group_by='endpoint')
 # Prometheus
 # https://blog.viktoradam.net/2020/05/11/prometheus-flask-exporter/
 # request duration metrics and request counters exposed on the /metrics endpoint of the Flask application
+# Flask CORS
+# https://flask-cors.corydolphin.com/en/latest/api.html#decorator
 
 # custom metric to be applied to multiple endpoints
 common_counter = metrics.counter(
