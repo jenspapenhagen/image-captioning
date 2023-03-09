@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, Response
+from flask import Flask, request, jsonify, Response, abort
 from flask_cors import CORS, cross_origin
 from prometheus_flask_exporter import PrometheusMetrics
 from transformers import VisionEncoderDecoderModel, ViTImageProcessor, AutoTokenizer
@@ -24,6 +24,12 @@ metrics = PrometheusMetrics(app, group_by='endpoint')
 
 # custom metric to be applied to multiple endpoints
 common_counter = metrics.counter(
+  'cnt_collection', 'Number of invocations per collection', labels={
+        'collection': lambda: request.args.get('data'),
+        'status': lambda resp: resp.status_code
+    }
+)
+remote_counter = metrics.counter(
     'by_endpoint_counter', 'Request count by endpoints',
     labels={'endpoint': lambda: request.endpoint}
 )
@@ -36,7 +42,8 @@ common_counter = metrics.counter(
 def local() -> Response:    
     data: str = request.args.get('data')
     if data is None:
-        return jsonify("Please input a valid string: /local?data=test.png")
+        print("Please input a valid string: /local?data=test.png")
+        abort(400)
     print("data ---- > ", data)
 
     realtiv_path = "images/" + data
@@ -44,7 +51,8 @@ def local() -> Response:
     images: list[Image.Image] = _load_local_image(image_path)
 
     if not images:
-        raise Exception("wrong Image get loaded: " + image_path)
+        print("wrong Image get loaded: " + image_path)
+        abort(404)
     results = _predict_step(images)
 
     return jsonify(results)   
@@ -53,17 +61,21 @@ def local() -> Response:
 # Example:
 # http://127.0.0.1:5000/remote?url=https%3A%2F%2Fwww.test.de%2Fimage.png
 @app.route('/remote', methods=['GET'])
+@remote_counter
+@cross_origin(origin='localhost', headers=['Content-Type', 'Authorization'])
 def remote() -> Response:
     url_parameter = request.args.get('url')
     if url_parameter is None:
-        jsonify("Please input a valid string: /remote?url=https%3A%2F%2Fwww.test.de%2Fimage.png")
+        print("Please input a valid string: /remote?url=https%3A%2F%2Fwww.test.de%2Fimage.png")
+        abort(400)
     print("URL ---- > ", url_parameter)
 
     images: list[Image.Image] = _load_remote_image(url_parameter)
     if not images:
-        raise Exception("wrong Image get loaded: " + url_parameter)
-
+        print("wrong Image get loaded: " + url_parameter)
+        abort(404)
     results = _predict_step(images)
+    
     return jsonify(results)
 
 # register additional default metrics
