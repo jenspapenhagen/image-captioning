@@ -1,2 +1,7 @@
 .gitignore
-
+.devcontainer
+.githug
+.vscode
+.editorconfig
+Dockerfile
+README.md
