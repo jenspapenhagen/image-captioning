@@ -5,7 +5,7 @@ WORKDIR /app
 COPY requirements.txt requirements.txt
 RUN pip3 install -r requirements.txt
 
-COPY ./app.py ./
+COPY . .
 
 RUN mkdir -p /app/images
 VOLUME /images
