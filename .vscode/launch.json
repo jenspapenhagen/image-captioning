@@ -5,12 +5,12 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "start flask app",
+            "name": "Launch HTTP Endpoint",
             "type": "python",
             "request": "launch",
-            "module": "app.py",
-            "justMyCode": true,
-            "cwd": "${workspaceFolder}/",
-         },
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        }
     ]
 }
