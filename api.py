@@ -32,6 +32,7 @@ common_counter = metrics.counter(
         'status': lambda resp: resp.status_code
     }
 )
+# extra metric for the remote entpoint
 remote_counter = metrics.counter(
     'by_endpoint_counter', 'Request count by endpoints',
     labels={'endpoint': lambda: request.endpoint}
@@ -40,8 +41,8 @@ remote_counter = metrics.counter(
 # Example:
 # http://127.0.0.1:5000/api/local?data=test.png
 @app.route('/api/local', methods=['GET'])
-@common_counter
 @cross_origin(origin='localhost', headers=['Content-Type', 'Authorization'])
+@common_counter
 def local() -> Response:    
     data: str = request.args.get('data')
     if data is None:
@@ -56,8 +57,8 @@ def local() -> Response:
     if not images:
         print("wrong Image get loaded: " + image_path)
         abort(404)
-    endpoint = modelloader.modelloader()
-    results = endpoint.predict_step(images)
+        
+    results = _predicht(images)
 
     return jsonify(results)   
 
@@ -65,8 +66,8 @@ def local() -> Response:
 # Example:
 # http://127.0.0.1:5000/api/remote?url=https%3A%2F%2Fwww.test.de%2Fimage.png
 @app.route('/api/remote', methods=['GET'])
-@remote_counter
 @cross_origin(origin='localhost', headers=['Content-Type', 'Authorization'])
+@remote_counter
 def remote() -> Response:
     url_parameter = request.args.get('url')
     if url_parameter is None:
@@ -78,23 +79,20 @@ def remote() -> Response:
     if not images:
         print("wrong Image get loaded: " + url_parameter)
         abort(404)
-    endpoint = modelloader.modelloader()
-    results = endpoint.predict_step(images)
+
+    results = _predicht(images)
     
     return jsonify(results)
-
-# register additional default metrics
-metrics.register_default(
-    metrics.counter(
-        'by_path_counter', 'Request count by request paths',
-        labels={'path': lambda: request.path}
-    )
-)
 
 @app.errorhandler(500)
 def server_error(e):
     logging.exception('An error occurred during a request. %s', e)
     return "An internal error occurred", 500
+
+def _predicht( image_list: list[Image.Image]) -> list[str]:
+    endpoint = modelloader.modelloader()
+    result = endpoint.predict_step(image_list);
+    return result;
 
 def _load_remote_image(url: str) -> list[Image.Image]:
     try:
