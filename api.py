@@ -12,6 +12,7 @@ import modelloader
 logging.basicConfig(level=logging.INFO)
 app = Flask(__name__)
 cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
+endpoint = None
 
 app.config['CORS_HEADERS'] = 'Content-Type'
 app.permanent_session_lifetime = datetime.timedelta(days=365)
@@ -89,15 +90,14 @@ def server_error(e):
     logging.exception('An error occurred during a request. %s', e)
     return "An internal error occurred", 500
 
-def _predicht( image_list: list[Image.Image]) -> list[str]:
-    endpoint = modelloader.modelloader()
-    result = endpoint.predict_step(image_list);
+def _predicht(self, image_list: list[Image.Image]) -> list[str]:
+    result = self.endpoint.predict_step(image_list);
     return result;
 
 def _load_remote_image(url: str) -> list[Image.Image]:
     try:
         images: list[Image.Image] = []
-        img = Image.open(urlopen(url))
+        img = Image.open(urlopen(url)).convert("RGB")
 
         images.append(img)
         # check for empty list
@@ -112,9 +112,7 @@ def _load_remote_image(url: str) -> list[Image.Image]:
 def _load_local_image(image_path: str) -> list[Image.Image]:
     try:
         images: list[Image.Image] = []
-        loaded_image = Image.open(open(image_path, 'rb'))
-        if loaded_image.mode != "RGB":
-            loaded_image = loaded_image.convert(mode="RGB")
+        loaded_image = Image.open(open(image_path, 'rb')).convert("RGB")
         images.append(loaded_image)
 
         # check for empty list
@@ -126,4 +124,5 @@ def _load_local_image(image_path: str) -> list[Image.Image]:
         raise Exception("Image Not Found")
 
 if __name__ == '__main__':
+    endpoint = modelloader.modelloader()
     app.run(debug=False, host='0.0.0.0', threaded=True)
