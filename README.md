@@ -6,7 +6,9 @@ playing around with image-captioning model and try to make it prod ready.
 3. try to make flask server prod save. with waitress server
     1. adding CORS
     2. adding Prometheus Metrics
-4.
+4. loading the model in an extzra service for better seperation
+5. testing other servicer than waitress
+6.
 
 
 Infos:
