@@ -2,7 +2,7 @@
 torch
 torchvision
 torchaudio
-Flask==2.2.3
+Flask==2.3.1
 Pillow==9.5.0
 transformers==4.28.1
 waitress==2.1.2
