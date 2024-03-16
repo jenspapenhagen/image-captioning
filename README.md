@@ -12,6 +12,6 @@ playing around with image-captioning model and try to make it prod ready.
 
 
 Infos:
-the model is: nlpconnect/vit-gpt2-image-captioning
+the model is: [https://huggingface.co/nlpconnect/vit-gpt2-image-captioning](nlpconnect/vit-gpt2-image-captioning)
 
 this need be downloaded separate and place in the folder modle/transformers/*
