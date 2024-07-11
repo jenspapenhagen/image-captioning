@@ -7,4 +7,4 @@ Pillow==10.4.0
 transformers==4.42.3
 waitress==3.0.0
 flask_cors==4.0.1
-prometheus_flask_exporter==0.23.0
+prometheus_flask_exporter==0.23.1
