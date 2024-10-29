@@ -5,6 +5,6 @@ torchaudio
 Flask==3.0.3
 Pillow==11.0.0
 transformers==4.46.0
-waitress==3.0.0
+waitress==3.0.1
 flask_cors==5.0.0
 prometheus_flask_exporter==0.23.1
