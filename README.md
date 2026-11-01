@@ -8,7 +8,7 @@ playing around with image-captioning model and try to make it prod ready.
     2. adding Prometheus Metrics
 4. loading the model in an extra service for better separation
 5. testing other servicer than waitress
-6.
+
 
 
 Infos:
