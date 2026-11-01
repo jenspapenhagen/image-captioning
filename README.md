@@ -15,3 +15,17 @@ Infos:
 the model is: [https://huggingface.co/nlpconnect/vit-gpt2-image-captioning](nlpconnect/vit-gpt2-image-captioning)
 
 this need be downloaded separate and place in the folder modle/transformers/*
+
+Endpoints:
+- `GET /healthz` -> `{"status": "ok"}`
+- `GET /api/local?data=pexels-photo-5596193.jpeg` (only files inside `images/`)
+- `GET /api/remote?url=https%3A%2F%2Fexample.com%2Fimage.png` (http/https, public hosts only, 5s timeout, 10 MB limit)
+
+Run:
+```sh
+./build.sh && ./start.sh                    # docker, model+images mounted from the host
+EAGER_LOAD=1 ./start-gunicore.sh            # gunicorn
+python3 -m unittest discover -s tests -v    # tests
+```
+
+Env: `MODEL_PATH` (default `./models/transformers`), `EAGER_LOAD=1` loads the model before the first request.
