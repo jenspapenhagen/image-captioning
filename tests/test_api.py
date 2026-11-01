@@ -115,15 +115,6 @@ class ApiTest(unittest.TestCase):
         response = self.client.get("/metrics", environ_base={"REMOTE_ADDR": "93.184.216.34"})
         self.assertEqual(response.status_code, 403)
 
-    def test_metrics_token(self):
-        with mock.patch.object(api, "METRICS_TOKEN", "s3cret"):
-            self.assertEqual(self.client.get("/metrics").status_code, 401)
-            self.assertEqual(
-                self.client.get("/metrics", headers={"Authorization": "Bearer s3cret"}).status_code, 200
-            )
-            self.assertEqual(
-                self.client.get("/metrics", headers={"X-Metrics-Token": "wrong"}).status_code, 401
-            )
 
 
 if __name__ == "__main__":

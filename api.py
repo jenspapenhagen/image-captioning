@@ -1,4 +1,3 @@
-import hmac
 import io
 import ipaddress
 import logging
@@ -25,7 +24,6 @@ MAX_IMAGE_PIXELS = 40_000_000
 REMOTE_TIMEOUT_SECONDS = 5
 ALLOWED_REMOTE_SCHEMES = ("http", "https")
 METRICS_PATH = "/metrics"
-METRICS_TOKEN = os.environ.get("METRICS_TOKEN")
 
 # 40 MP is far above anything the model can process, but stops decompression bombs
 Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
@@ -67,14 +65,8 @@ remote_counter = metrics.counter(
 
 @app.before_request
 def _protect_metrics():
-    """Keep /metrics off the public internet: token if configured, otherwise internal clients only."""
+    """Keep /metrics reachable for internal scrapers only."""
     if request.path != METRICS_PATH:
-        return None
-    if METRICS_TOKEN:
-        authorization = request.headers.get("Authorization", "")
-        token = authorization[7:] if authorization.startswith("Bearer ") else request.headers.get("X-Metrics-Token", "")
-        if not hmac.compare_digest(token, METRICS_TOKEN):
-            abort(401)
         return None
     if not _is_trusted_client(request.remote_addr):
         abort(403)

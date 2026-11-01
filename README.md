@@ -20,6 +20,7 @@ Endpoints:
 - `GET /api/local?data=pexels-photo-5596193.jpeg` (only files inside `images/`)
 - `GET /api/remote?url=https%3A%2F%2Fexample.com%2Fimage.png` (http/https, public hosts only, 5s timeout, 10 MB limit)
 - `GET /healthz` -> health check
+- `GET /metrics` -> Prometheus metrics, only reachable for private/loopback clients
 
 Run:
 ```bash
@@ -32,7 +33,6 @@ python3 -m unittest discover -s tests -v
 Env: 
 - `MODEL_PATH` (default `./models/transformers`)
 - `EAGER_LOAD=1` loads the model before the first request.
-- `METRICS_TOKEN` protects `/metrics`; without it only private/loopback clients may scrape.
 
 The container runs as UID/GID 10001 with a read-only root filesystem, so `models/` and `images/` have to be readable for that UID.
 
