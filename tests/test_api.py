@@ -103,6 +103,28 @@ class ApiTest(unittest.TestCase):
         with self.assertRaises(api.BadRequestError):
             handler.redirect_request(mock.MagicMock(), None, 302, "Found", {}, "http://127.0.0.1/x.png")
 
+    def test_decompression_bomb_rejected(self):
+        with mock.patch.object(api.Image, "MAX_IMAGE_PIXELS", 0):
+            response = self.client.get("/api/local?data=pexels-photo-5596193.jpeg")
+        self.assertEqual(response.status_code, 400)
+
+    def test_metrics_allowed_from_private_client(self):
+        self.assertEqual(self.client.get("/metrics").status_code, 200)
+
+    def test_metrics_blocked_from_public_client(self):
+        response = self.client.get("/metrics", environ_base={"REMOTE_ADDR": "93.184.216.34"})
+        self.assertEqual(response.status_code, 403)
+
+    def test_metrics_token(self):
+        with mock.patch.object(api, "METRICS_TOKEN", "s3cret"):
+            self.assertEqual(self.client.get("/metrics").status_code, 401)
+            self.assertEqual(
+                self.client.get("/metrics", headers={"Authorization": "Bearer s3cret"}).status_code, 200
+            )
+            self.assertEqual(
+                self.client.get("/metrics", headers={"X-Metrics-Token": "wrong"}).status_code, 401
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

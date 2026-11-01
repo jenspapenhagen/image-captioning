@@ -131,3 +131,5 @@ dmypy.json
 #adding project spef.folder
 models/transformers/
 images/
+# IDE
+.idea/

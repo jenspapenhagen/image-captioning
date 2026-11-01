@@ -32,4 +32,7 @@ python3 -m unittest discover -s tests -v
 Env: 
 - `MODEL_PATH` (default `./models/transformers`)
 - `EAGER_LOAD=1` loads the model before the first request.
+- `METRICS_TOKEN` protects `/metrics`; without it only private/loopback clients may scrape.
+
+The container runs as UID/GID 10001 with a read-only root filesystem, so `models/` and `images/` have to be readable for that UID.
 

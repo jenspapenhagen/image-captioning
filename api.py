@@ -1,3 +1,4 @@
+import hmac
 import io
 import ipaddress
 import logging
@@ -20,8 +21,14 @@ logger = logging.getLogger(__name__)
 
 IMAGES_DIR = os.path.realpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "images"))
 MAX_IMAGE_BYTES = 10 * 1024 * 1024
+MAX_IMAGE_PIXELS = 40_000_000
 REMOTE_TIMEOUT_SECONDS = 5
 ALLOWED_REMOTE_SCHEMES = ("http", "https")
+METRICS_PATH = "/metrics"
+METRICS_TOKEN = os.environ.get("METRICS_TOKEN")
+
+# 40 MP is far above anything the model can process, but stops decompression bombs
+Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = MAX_IMAGE_BYTES
@@ -48,7 +55,7 @@ class BadRequestError(Exception):
 common_counter = metrics.counter(
     "cnt_collection", "Number of invocations per collection",
     labels={
-        "collection": lambda: request.args.get("data"),
+        "collection": lambda: "local",
         "status": lambda resp: resp.status_code,
     },
 )
@@ -56,6 +63,22 @@ remote_counter = metrics.counter(
     "by_endpoint_counter", "Request count by endpoints",
     labels={"endpoint": lambda: request.endpoint},
 )
+
+
+@app.before_request
+def _protect_metrics():
+    """Keep /metrics off the public internet: token if configured, otherwise internal clients only."""
+    if request.path != METRICS_PATH:
+        return None
+    if METRICS_TOKEN:
+        authorization = request.headers.get("Authorization", "")
+        token = authorization[7:] if authorization.startswith("Bearer ") else request.headers.get("X-Metrics-Token", "")
+        if not hmac.compare_digest(token, METRICS_TOKEN):
+            abort(401)
+        return None
+    if not _is_trusted_client(request.remote_addr):
+        abort(403)
+    return None
 
 
 if os.environ.get("EAGER_LOAD", "0") == "1":
@@ -97,6 +120,8 @@ def local() -> Response:
 
     try:
         images = _load_local_image(image_path)
+    except BadRequestError as exc:
+        abort(400, description=str(exc))
     except ImageLoadError:
         abort(404, description="Image Not Found")
 
@@ -153,6 +178,13 @@ def _is_public_ip(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
     )
 
 
+def _is_trusted_client(remote_addr: str | None) -> bool:
+    try:
+        return not _is_public_ip(ipaddress.ip_address(remote_addr or ""))
+    except ValueError:
+        return False
+
+
 def _validate_remote_url(url: str) -> None:
     """Reject non http(s) URLs and hosts resolving to internal addresses (SSRF)."""
     parsed = urlparse(url)
@@ -207,6 +239,9 @@ def _load_remote_image(url: str) -> list[Image.Image]:
     except OSError as exc:
         logger.info("remote content is not an image: %s", url)
         raise ImageLoadError("can not load image") from exc
+    except Image.DecompressionBombError as exc:
+        logger.warning("decompression bomb rejected: %s", url)
+        raise BadRequestError("Image is too large") from exc
 
     return [image]
 
@@ -218,6 +253,9 @@ def _load_local_image(image_path: str) -> list[Image.Image]:
     except OSError as exc:
         logger.info("local image could not be opened: %s", image_path)
         raise ImageLoadError("can not load image") from exc
+    except Image.DecompressionBombError as exc:
+        logger.warning("decompression bomb rejected: %s", image_path)
+        raise BadRequestError("Image is too large") from exc
 
     return [image]
 
